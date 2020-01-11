@@ -52,4 +52,16 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@+id/toptoolbar"/>
+    <GridView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:visibility="visible"
+        android:gravity="center"
+        android:columnWidth="100dp"
+        android:numColumns="auto_fit"
+        android:stretchMode="spacingWidthUniform"
+        android:layout_below="@id/toptoolbar"
+        android:id="@+id/gridViewFolder">
+
+    </GridView>
 </RelativeLayout>

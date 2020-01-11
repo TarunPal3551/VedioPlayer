@@ -18,12 +18,12 @@ import java.util.Formatter;
 import java.util.List;
 import java.util.Locale;
 
-public class GridAdapter extends BaseAdapter {
-    private List<VideoItem> itemList;
+public class FileGridAdapter extends BaseAdapter {
+    private List<VedioFileModel> itemList;
 
     private Context mContext;
 
-    public GridAdapter(List<VideoItem> itemList, Context mContext) {
+    public FileGridAdapter(List<VedioFileModel> itemList, Context mContext) {
         this.itemList = itemList;
         this.mContext = mContext;
     }
@@ -47,19 +47,38 @@ public class GridAdapter extends BaseAdapter {
     public View getView(int i, View itemView, ViewGroup viewGroup) {
         if (itemView== null) {
             final LayoutInflater layoutInflater = LayoutInflater.from(mContext);
-            itemView = layoutInflater.inflate(R.layout.grid_row, null);
+            itemView = layoutInflater.inflate(R.layout.videofilegriditem, null);
         }
-
         ImageView thumbnail;
-        TextView title;
-        TextView videoCount;
+        TextView title, duration;
         thumbnail = (ImageView) itemView.findViewById(R.id.thumbnail);
         title = (TextView) itemView.findViewById(R.id.title);
-        videoCount = (TextView) itemView.findViewById(R.id.vedioCount);
+        duration = (TextView) itemView.findViewById(R.id.duration);
         try {
-            VideoItem item = itemList.get(i);
-            title.setText(Html.fromHtml(item.getDISPLAY_NAME()));
-            videoCount.setText(Html.fromHtml(String.valueOf(item.getVIDEO_COUNT()) + " " + "Videos"));
+            VedioFileModel item = itemList.get(i);
+            title.setText(Html.fromHtml(item.getmDisplayName()));
+            duration.setText(stringForTime(item.getmDuration()));
+
+            Uri uri = Uri.fromFile(new File(item.getmUrl_FilePath()));
+            if (item.getmContentType().equalsIgnoreCase("video")) {
+                RequestOptions options = new RequestOptions()
+                        .centerCrop()
+                        .placeholder(R.drawable.loading)
+                        .error(R.drawable.loading);
+
+                Glide.with(mContext)
+                        .load(item.getmUrl_FilePath())
+                        .apply(options)
+                        .into(thumbnail);
+            } else {
+                itemList.remove(i);
+
+
+            }
+
+
+
+
         } catch (Exception e) {
             e.printStackTrace();
         }

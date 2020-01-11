@@ -6,7 +6,9 @@ import android.app.Dialog;
 import android.content.ComponentName;
 import android.content.ContentResolver;
 import android.content.ContentUris;
+import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.drawable.ColorDrawable;
@@ -15,6 +17,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.provider.MediaStore;
+
 import androidx.annotation.RequiresApi;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.FileProvider;
@@ -22,11 +25,14 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
+
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.Window;
+import android.widget.AdapterView;
 import android.widget.Button;
+import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -48,6 +54,10 @@ public class VedioListActivity extends AppCompatActivity implements VideoFileAda
     TextView info_TitleTextview, info_SizeTextView, info_DurationTextView, info_ResolutionTextView, info_PathTextView;
     private Button dialogButtonOk;
     private ImageView openMenuButton;
+    GridView gridView;
+    FileGridAdapter gridAdapter;
+    SharedPreferences sharedPreferences;
+    SharedPreferences.Editor editor;
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     @Override
@@ -73,7 +83,10 @@ public class VedioListActivity extends AppCompatActivity implements VideoFileAda
         Bundle bundle = intent.getExtras();
         String vedio_path = bundle.getString("FolderPath");
         folder_Name_TextView.setText("" + vedio_path);
+        sharedPreferences = getSharedPreferences(getPackageName(), Context.MODE_PRIVATE);
+        editor = sharedPreferences.edit();
         vedioListRecylerViw = (RecyclerView) findViewById(R.id.recylerviewvediolist);
+        gridView = (GridView) findViewById(R.id.gridViewFolder);
         vedioListRecylerViw.setHasFixedSize(true);
         vedioListRecylerViw.setLayoutManager(new LinearLayoutManager(this));
         getVideoByAlbum(vedio_path);
@@ -133,14 +146,35 @@ public class VedioListActivity extends AppCompatActivity implements VideoFileAda
                 popup.show();
             }
         });
+        if (sharedPreferences.getBoolean("Layout", false)) {
 
+            gridView.setVisibility(View.GONE);
+            vedioListRecylerViw.setVisibility(View.VISIBLE);
+        } else {
+
+            gridView.setVisibility(View.VISIBLE);
+            vedioListRecylerViw.setVisibility(View.GONE);
+        }
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int position, long l) {
+                Intent intent = new Intent(VedioListActivity.this, VideoPlayerActivity.class);
+                intent.putParcelableArrayListExtra("VideoPlaylist", videoItemByAlbum);
+                intent.putExtra("SelectVideoFilePath", videoItemByAlbum.get(position).getmUrl_FilePath());
+                intent.putExtra("SelectVideoposition", position);
+                intent.putExtra("SelectVideoName", videoItemByAlbum.get(position).getmDisplayName());
+                intent.putExtra("filepath", videoItemByAlbum.get(position).getmUrl_FilePath());
+                startActivity(intent);
+            }
+        });
     }
 
     @TargetApi(Build.VERSION_CODES.JELLY_BEAN)
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public void getVideoByAlbum(String bucketName) {
         try {
-            String orderBy = MediaStore.Images.Media.DATE_TAKEN;
+            String orderBy = MediaStore.Images.Media.DATE_ADDED;
+            String BUCKET_ORDER_BY = MediaStore.Video.VideoColumns.DATE_ADDED + " DESC";
 //            String searchParams = null;
 //            String bucket = bucketName;
 //            searchParams = bucket;
@@ -151,13 +185,15 @@ public class VedioListActivity extends AppCompatActivity implements VideoFileAda
                     MediaStore.Video.VideoColumns.DATE_TAKEN,
                     MediaStore.Video.VideoColumns.DATA,
                     MediaStore.Video.VideoColumns.DURATION,
-                    MediaStore.Video.VideoColumns.TITLE, MediaStore.Video.VideoColumns.RESOLUTION, MediaStore.Video.VideoColumns.SIZE
+                    MediaStore.Video.VideoColumns.TITLE,
+                    MediaStore.Video.VideoColumns.RESOLUTION,
+                    MediaStore.Video.VideoColumns.SIZE, MediaStore.Video.VideoColumns.DATE_ADDED
             };
 
             Cursor mVideoCursor;
             mVideoCursor = this.getContentResolver().query(
                     MediaStore.Video.Media.EXTERNAL_CONTENT_URI, PROJECTION_BUCKET,
-                    selection, selectionArgs, orderBy, null);
+                    selection, selectionArgs, BUCKET_ORDER_BY, null);
 
             if (mVideoCursor != null) {
                 if (mVideoCursor.moveToFirst()) {
@@ -178,7 +214,7 @@ public class VedioListActivity extends AppCompatActivity implements VideoFileAda
 
 
                     int dateColumn = mVideoCursor
-                            .getColumnIndex(MediaStore.Video.Media.DATE_TAKEN);
+                            .getColumnIndex(MediaStore.Video.Media.DATE_ADDED);
                     int dataColumn = mVideoCursor.getColumnIndex(MediaStore.Video.Media.DATA);
                     int durationColumn = mVideoCursor.getColumnIndex(MediaStore.Video.Media.DURATION);
                     int tittleColumn = mVideoCursor.getColumnIndex(MediaStore.Video.Media.TITLE);
@@ -216,6 +252,10 @@ public class VedioListActivity extends AppCompatActivity implements VideoFileAda
         }
         adapter = new VideoFileAdapter(videoItemByAlbum, VedioListActivity.this);
         vedioListRecylerViw.setAdapter(adapter);
+        gridAdapter = new FileGridAdapter(videoItemByAlbum, VedioListActivity.this);
+        gridView.setAdapter(gridAdapter);
+        gridAdapter.notifyDataSetChanged();
+
         adapter.notifyDataSetChanged();
         adapter.setOnItemClickListener(this);
         adapter.setOnItemLongClickListener(this);

@@ -17,14 +17,14 @@
     <RelativeLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:gravity="center">
+       >
         <TextView
             android:id="@+id/title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="WhatsAppVideos"
             android:gravity="center"
+            android:layout_centerHorizontal="true"
             android:textColor="@android:color/black"/>
         <TextView
             android:id="@+id/vedioCount"
@@ -32,9 +32,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="2dp"
             android:text="50 Videos"
-            android:gravity="center"
+            android:layout_centerInParent="true"
             android:layout_below="@+id/title"
-            android:layout_centerHorizontal="true"
+
 
             />
 

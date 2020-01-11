@@ -2,29 +2,39 @@ package in.avilaksh.vedioplayer;
 
 import android.Manifest;
 import android.annotation.TargetApi;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.provider.MediaStore;
+
 import androidx.annotation.RequiresApi;
+import androidx.coordinatorlayout.widget.CoordinatorLayout;
 import androidx.core.app.ActivityCompat;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.appcompat.widget.PopupMenu;
 import androidx.recyclerview.widget.RecyclerView;
+
 import android.util.Log;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
+import android.widget.GridView;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.Toast;
 
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements ItemClickListener {
@@ -46,6 +56,13 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
     RelativeLayout toolbar;
     ImageView openMenuButton;
     int backcount = 1;
+    ImageView changeLayout;
+    GridView gridView;
+    SharedPreferences sharedPreferences;
+    SharedPreferences.Editor editor;
+    GridAdapter gridAdapter;
+    ImageView sortImageView;
+    String ORDER_BY="";
 
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
@@ -53,13 +70,19 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        sharedPreferences = getSharedPreferences(getPackageName(), Context.MODE_PRIVATE);
+        editor = sharedPreferences.edit();
         openMenuButton = (ImageView) findViewById(R.id.openMenu);
         toolbar = (RelativeLayout) findViewById(R.id.toptoolbar);
+        sortImageView = (ImageView) findViewById(R.id.sortImageView);
+
 
         //ListView listView = (ListView) findViewById(R.id.listview);
 
 
         mRecyclerView = (RecyclerView) findViewById(R.id.recycler_view);
+        gridView = (GridView) findViewById(R.id.gridViewFolder);
+
         mRecyclerView.setHasFixedSize(true);
         mRecyclerView.setLayoutManager(new LinearLayoutManager(this));
         openMenuButton.setOnClickListener(new View.OnClickListener() {
@@ -118,6 +141,79 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
                 popup.show();
             }
         });
+        changeLayout = (ImageView) findViewById(R.id.changeView);
+        changeLayout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                //true for recyclerView
+                if (sharedPreferences.getBoolean("Layout", false)) {
+                    editor.putBoolean("Layout", false);
+                    editor.apply();
+                    gridView.setVisibility(View.VISIBLE);
+                    mRecyclerView.setVisibility(View.GONE);
+                    changeLayout.setImageResource(R.drawable.ic_listview);
+                } else {
+                    editor.putBoolean("Layout", true);
+                    editor.apply();
+                    gridView.setVisibility(View.GONE);
+                    mRecyclerView.setVisibility(View.VISIBLE);
+                    changeLayout.setImageResource(R.drawable.ic_gridview);
+                }
+
+            }
+        });
+        if (sharedPreferences.getBoolean("Layout", false)) {
+
+            gridView.setVisibility(View.GONE);
+            mRecyclerView.setVisibility(View.VISIBLE);
+            changeLayout.setImageResource(R.drawable.ic_gridview);
+        } else {
+
+            gridView.setVisibility(View.VISIBLE);
+            mRecyclerView.setVisibility(View.GONE);
+            changeLayout.setImageResource(R.drawable.ic_listview);
+        }
+        gridView.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+            @Override
+            public void onItemClick(AdapterView<?> adapterView, View view, int i, long l) {
+                String path = vedioFolder.get(i).getDISPLAY_NAME();
+                Intent intent = new Intent(MainActivity.this, VedioListActivity.class);
+                intent.putExtra("FolderPath", path);
+                startActivity(intent);
+            }
+        });
+        sortImageView.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                final AlertDialog.Builder builder = new AlertDialog.Builder(MainActivity.this);
+
+                // Set the alert dialog title
+                builder.setTitle("Sort by");
+
+                // Initializing an array of flowers
+                final String[] flowers = new String[]{
+                        "Date",
+                        "Name A TO Z",
+                        "Name Z TO A",
+                        "Size"
+                };
+                // Item click listener
+                builder.setSingleChoiceItems(
+                        flowers, // Items list
+                        -1, // Index of checked item (-1 = no selection)
+                        (dialogInterface, i) -> {
+                            // Get the alert dialog selected item's text
+                            String selectedItem = Arrays.asList(flowers).get(i);
+
+                            // Display the selected item's text on snack bar
+
+                        });
+                builder.setPositiveButton("OK", (dialogInterface, i) -> {
+                    // Just dismiss the alert dialog after selection
+                    // Or do something now
+                });
+            }
+        });
 //        if (isReadStoragePermissionGranted()){
 //            getVideoAlbum();
 //
@@ -149,7 +245,10 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
     public List getVideoByAlbum(String bucketName) {
         try {
-            String orderBy = MediaStore.Images.Media.DATE_TAKEN;
+            String BUCKET_GROUP_BY =
+                    "1) GROUP BY ${" + MediaStore.Video.VideoColumns.BUCKET_ID + "}, (${" + MediaStore.Video.VideoColumns.BUCKET_DISPLAY_NAME + "}";
+            String BUCKET_ORDER_BY = MediaStore.Video.VideoColumns.DATE_ADDED + " DESC";
+
 //            String searchParams = null;
 //            String bucket = bucketName;
 //            searchParams = bucket;
@@ -160,12 +259,13 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
                     MediaStore.Video.VideoColumns.DATE_TAKEN,
                     MediaStore.Video.VideoColumns.DATA,
                     MediaStore.Video.VideoColumns.DURATION,
-                    MediaStore.Video.VideoColumns.TITLE};
+                    MediaStore.Video.VideoColumns.TITLE,
+                    MediaStore.Video.VideoColumns.DATE_ADDED};
 
             Cursor mVideoCursor;
             mVideoCursor = this.getContentResolver().query(
                     MediaStore.Video.Media.EXTERNAL_CONTENT_URI, PROJECTION_BUCKET,
-                    selection, selectionArgs, orderBy, null);
+                    BUCKET_GROUP_BY, null, BUCKET_ORDER_BY, null);
 
             if (mVideoCursor != null) {
                 if (mVideoCursor.moveToFirst()) {
@@ -182,12 +282,13 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
 
 
                     int dateColumn = mVideoCursor
-                            .getColumnIndex(MediaStore.Video.Media.DATE_TAKEN);
+                            .getColumnIndex(MediaStore.Video.Media.DATE_ADDED);
                     int dataColumn = mVideoCursor.getColumnIndex(MediaStore.Video.Media.DATA);
                     int durationColumn = mVideoCursor.getColumnIndex(MediaStore.Video.Media.DURATION);
                     int tittleColumn = mVideoCursor.getColumnIndex(MediaStore.Video.Media.TITLE);
                     do {
                         date = mVideoCursor.getString(dateColumn);
+                        Log.e(TAG, "getVideoByAlbum: Date" + date);
                         data = mVideoCursor.getString(dataColumn);
                         displayName = mVideoCursor.getString(bucketColumn);
                         duration = mVideoCursor.getInt(durationColumn);
@@ -208,6 +309,7 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
 // mediaAdapter.notifyDataSetChanged();
 
                 }
+                mVideoCursor.close();
 
             }
         } catch (Exception e) {
@@ -221,16 +323,29 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
     }
 
     @RequiresApi(api = Build.VERSION_CODES.JELLY_BEAN)
-    public List getVideoAlbum() {
+    public List getVideoAlbum(String sortOrder) {
         String[] PROJECTION_BUCKET_1 = {"DISTINCT " +
                 MediaStore.Video.VideoColumns.BUCKET_DISPLAY_NAME,
                 MediaStore.Video.VideoColumns.BUCKET_ID,
                 MediaStore.Video.VideoColumns.DATA,
-                MediaStore.Images.ImageColumns.DATE_TAKEN};
+                MediaStore.Video.VideoColumns.DATE_TAKEN, MediaStore.Video.VideoColumns.DATE_ADDED};
 
-        String BUCKET_ORDER_BY = "MAX(datetaken)DESC";
-        String BUCKET_GROUP_BY = "1)GROUP BY 1,(2";
+        String BUCKET_GROUP_BY =
+                "1) GROUP BY 1,(2";
 
+        String BUCKET_ORDER_BY = MediaStore.Video.VideoColumns.DATE_ADDED + " DESC";
+        if (sortOrder.equals("DATE")){
+            BUCKET_ORDER_BY = MediaStore.Video.VideoColumns.DATE_ADDED + " DESC";
+        }
+        else if(sortOrder.equals("NAME A To Z")){
+            BUCKET_ORDER_BY = MediaStore.Video.VideoColumns.BUCKET_DISPLAY_NAME + " DESC";
+
+        }
+        else if(sortOrder.equals("NAME Z TO A"))
+        {
+            BUCKET_ORDER_BY = MediaStore.Video.VideoColumns.DATE_ADDED + " DESC";
+
+        }
 
         Uri video = MediaStore.Video.Media.EXTERNAL_CONTENT_URI;
 
@@ -246,15 +361,15 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
                 int count;
 
                 int bucketColumn = cur
-                        .getColumnIndex(MediaStore.Images.Media.BUCKET_DISPLAY_NAME);
+                        .getColumnIndex(MediaStore.Video.VideoColumns.BUCKET_DISPLAY_NAME);
 
                 int dateColumn = cur
-                        .getColumnIndex(MediaStore.Images.Media.DATE_TAKEN);
-                int dataColumn = cur.getColumnIndex(MediaStore.Images.Media.DATA);
+                        .getColumnIndex(MediaStore.Video.VideoColumns.DATE_ADDED);
+                int dataColumn = cur.getColumnIndex(MediaStore.Video.VideoColumns.DATA);
 
 
                 int bucketIdColumn = cur
-                        .getColumnIndex(MediaStore.Images.Media.BUCKET_ID);
+                        .getColumnIndex(MediaStore.Video.VideoColumns.BUCKET_ID);
                 // int bucketCountcolumn=cur.getColumnIndex(MediaStore.Video.VideoColumns.SIZE);
 
                 do {
@@ -262,6 +377,7 @@ public class MainActivity extends AppCompatActivity implements ItemClickListener
 
                     bucket = cur.getString(bucketColumn);
                     date = cur.getString(dateColumn);
+                    Log.e(TAG, "getVideoByAlbum: Date" + date);
                     data = cur.getString(dataColumn);
                     bucketId = cur.getInt(bucketIdColumn);
 
@@ -367,7 +483,10 @@ videoItem.setDURATION(cursor.getString(5));
             cur.close();
         }
         adapter = new VideoFolderAdapter(vedioFolder, MainActivity.this);
+        gridAdapter = new GridAdapter(vedioFolder, MainActivity.this);
         mRecyclerView.setAdapter(adapter);
+        gridView.setAdapter(gridAdapter);
+        gridAdapter.notifyDataSetChanged();
         adapter.notifyDataSetChanged();
         adapter.setClickListener(this);
 

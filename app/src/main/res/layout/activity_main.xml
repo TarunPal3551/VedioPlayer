@@ -22,7 +22,8 @@
     android:columnWidth="100dp"
     android:numColumns="auto_fit"
     android:stretchMode="spacingWidthUniform"
-    android:layout_below="@id/toptoolbar">
+    android:layout_below="@id/toptoolbar"
+    android:id="@+id/gridViewFolder">
 
 </GridView>
     <RelativeLayout
@@ -35,7 +36,7 @@
         <ImageView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            app:srcCompat="@drawable/ic_gridview"
+            app:srcCompat="@drawable/ic_listview"
             android:layout_centerVertical="true"
 
             android:id="@+id/changeView"
@@ -49,6 +50,16 @@
                 android:layout_alignParentRight="true"
                 android:layout_marginRight="15dp"
                 android:id="@+id/openMenu"/>
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:srcCompat="@drawable/ic_sort"
+            android:layout_centerVertical="true"
+
+
+            android:id="@+id/sortImageView"
+            android:layout_marginRight="10dp"
+            android:layout_toLeftOf="@id/changeView"/>
 
 
 
