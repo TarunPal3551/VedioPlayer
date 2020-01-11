@@ -1,0 +1,24 @@
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/one"
+        android:icon="@drawable/ic_help"
+        android:iconTint="@android:color/white"
+        android:title="Help and Send Feedback"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/two"
+        android:icon="@drawable/ic_share"
+        android:iconTint="@android:color/white"
+        android:title="Share"
+        app:showAsAction="ifRoom" />
+
+    <item
+        android:id="@+id/three"
+        android:icon="@drawable/ic_rateus"
+        android:title="Rate and Review"
+        app:showAsAction="ifRoom" />
+
+</menu>
